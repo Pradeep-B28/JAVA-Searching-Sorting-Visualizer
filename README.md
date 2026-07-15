@@ -2,8 +2,6 @@
 
 Interactive Java Swing application for visualizing sorting and searching algorithms.
 
-![Screenshot](screenshot.png) *(optional – add a screenshot later)*
-
 ## Features
 - **6 Sorting Algorithms**: Bubble, Selection, Insertion, Merge, Quick, Heap
 - **2 Searching Algorithms**: Linear Search, Binary Search
