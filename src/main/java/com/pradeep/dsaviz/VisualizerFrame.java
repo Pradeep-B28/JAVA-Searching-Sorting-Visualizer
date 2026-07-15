@@ -5,16 +5,23 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.border.LineBorder;
+import javax.swing.plaf.ColorUIResource;
+import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 public final class VisualizerFrame extends JFrame {
-    private static final Color BACKGROUND = new Color(15, 23, 42);
-    private static final Color BAR = new Color(56, 189, 248);
-    private static final Color ACTIVE = new Color(251, 191, 36);
-    private static final Color FOUND = new Color(74, 222, 128);
-    private static final Color LEFT_COLOR = new Color(14, 116, 144);
-    private static final Color RIGHT_COLOR = new Color(126, 34, 206);
-    private static final Color PIVOT_COLOR = new Color(236, 72, 153); // pink/magenta
+    // -------- Clean, modern color palette --------
+    private static final Color BG_DARK = new Color(10, 14, 23);
+    private static final Color BG_PANEL = new Color(20, 28, 45);
+    private static final Color BAR_COLOR = new Color(0, 180, 255);   // bright cyan
+    private static final Color ACTIVE = new Color(255, 215, 0);      // gold
+    private static final Color FOUND = new Color(0, 255, 136);       // neon green
+    private static final Color PIVOT_COLOR = new Color(255, 107, 157); // pink
+    private static final Color HEADER_START = new Color(0, 180, 255);
+    private static final Color HEADER_END = new Color(102, 126, 234);
+    private static final Color ACCENT = new Color(0, 180, 255);
 
+    // -------- Algorithm names --------
     private static final String[] SORTING_ALGORITHMS = {
         "Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort", "Quick Sort", "Heap Sort"
     };
@@ -22,12 +29,14 @@ public final class VisualizerFrame extends JFrame {
         "Linear Search", "Binary Search"
     };
 
+    // -------- UI Components --------
     private final Random random = new Random();
     private final BarPanel bars = new BarPanel();
     private final JComboBox<String> mode = new JComboBox<>(new String[]{"Sorting", "Searching"});
     private final JComboBox<String> algorithm = new JComboBox<>(SORTING_ALGORITHMS);
     private final JSlider size = new JSlider(10, 60, 30);
     private final JSlider speed = new JSlider(10, 1000, 300);
+    private final JLabel targetLabel = new JLabel("Target");
     private final JTextField target = new JTextField(5);
     private final JTextField customSize = new JTextField("5", 4);
     private final JTextField customElements = new JTextField(30);
@@ -38,26 +47,25 @@ public final class VisualizerFrame extends JFrame {
     private final JButton reset = new JButton("New Array");
     private final JButton useCustomArray = new JButton("Use Custom Array");
 
+    // -------- State --------
     private int[] values;
     private int first = -1;
     private int second = -1;
     private int result = -1;
-    private int pivotIndex = -1;   // for Quick Sort
-
-    // Merge sort state
+    private int pivotIndex = -1;
     private MergeState mergeState = new MergeState();
-
-    // Heap sort state (used for visualisation)
     private int heapSize = 0;
-
     private volatile boolean stopRequested;
     private volatile boolean paused = false;
     private final Object pauseLock = new Object();
 
     public VisualizerFrame() {
         super("DSA Visualizer");
+        setModernLookAndFeel();
+        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(ACCENT));
+        UIManager.put("ComboBox.selectionForeground", new ColorUIResource(Color.BLACK));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(980, 700));
+        setMinimumSize(new Dimension(1024, 720));
         setLocationByPlatform(true);
         buildUi();
         updateAlgorithmOptions();
@@ -65,93 +73,227 @@ public final class VisualizerFrame extends JFrame {
         updateInfo();
     }
 
+    private void setModernLookAndFeel() {
+        try {
+            UIManager.setLookAndFeel(new NimbusLookAndFeel());
+            // Global dark theme
+            UIManager.put("control", new ColorUIResource(BG_PANEL));
+            UIManager.put("nimbusBase", new ColorUIResource(ACCENT));
+            UIManager.put("nimbusBlueGrey", new ColorUIResource(ACCENT));
+            UIManager.put("nimbusLightBackground", new ColorUIResource(BG_DARK));
+            UIManager.put("text", new ColorUIResource(Color.WHITE));
+            UIManager.put("nimbusSelectionBackground", new ColorUIResource(ACCENT));
+            UIManager.put("nimbusSelectionForeground", new ColorUIResource(Color.BLACK));
+            UIManager.put("info", new ColorUIResource(BG_PANEL));
+            UIManager.put("Button.background", new ColorUIResource(ACCENT));
+            UIManager.put("Button.foreground", new ColorUIResource(Color.WHITE));
+            UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 13));
+            // Slider styling – ensure these keys exist to avoid NPE if we were to use custom UI,
+            // but we won't – we'll just set these for the default Nimbus slider.
+            UIManager.put("Slider.background", new ColorUIResource(BG_PANEL));
+            UIManager.put("Slider.foreground", new ColorUIResource(ACCENT));
+            UIManager.put("Slider.trackColor", new ColorUIResource(ACCENT));
+            UIManager.put("Slider.thumbColor", new ColorUIResource(Color.WHITE));
+            // These are used by the default MetalSliderUI if Nimbus falls back – we set them defensively.
+            UIManager.put("Slider.thumbHeight", 16);
+            UIManager.put("Slider.thumbWidth", 16);
+            UIManager.put("Slider.trackWidth", 6);
+        } catch (Exception e) {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ex) { /* ignore */ }
+        }
+    }
+
+    // -------- UI Construction --------
     private void buildUi() {
         JPanel root = new JPanel(new BorderLayout(12, 12));
-        root.setBackground(BACKGROUND);
+        root.setBackground(BG_DARK);
         root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
         setContentPane(root);
 
         // Header
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                GradientPaint gp = new GradientPaint(0, 0, HEADER_START, getWidth(), getHeight(), HEADER_END);
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.dispose();
+            }
+        };
+        header.setLayout(new BorderLayout(8, 4));
+        header.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
         header.setOpaque(false);
+
         JLabel title = new JLabel("DSA Visualizer");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 28f));
+        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
         title.setForeground(Color.WHITE);
-        JLabel subtitle = new JLabel("Explore algorithms step by step in Java");
-        subtitle.setForeground(new Color(203, 213, 225));
-        subtitle.setFont(subtitle.getFont().deriveFont(14f));
+        JLabel subtitle = new JLabel("Interactive learning for Sorting & Searching algorithms");
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        subtitle.setForeground(new Color(230, 240, 255));
         header.add(title, BorderLayout.NORTH);
         header.add(subtitle, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // Bar panel
-        bars.setBackground(BACKGROUND);
-        bars.setBorder(BorderFactory.createLineBorder(new Color(51, 65, 85), 2, true));
+        // Bar Panel - the main area
+        bars.setBackground(BG_DARK);
+        bars.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(51, 65, 85), 2, true),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
         root.add(bars, BorderLayout.CENTER);
 
         // Controls
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 6));
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         controls.setOpaque(false);
-        controls.add(label("Mode"));
-        controls.add(mode);
-        controls.add(label("Algorithm"));
-        controls.add(algorithm);
-        controls.add(label("Array size"));
-        controls.add(size);
-        controls.add(label("Delay (ms)"));
-        controls.add(speed);
-        controls.add(label("Target"));
-        controls.add(target);
-        controls.add(reset);
-        controls.add(run);
-        controls.add(pause);
-        controls.add(stop);
+        controls.setBorder(BorderFactory.createEmptyBorder(8, 0, 4, 0));
+        controls.add(createStyledLabel("Mode"));
+        controls.add(styleCombo(mode));
+        controls.add(createStyledLabel("Algorithm"));
+        controls.add(styleCombo(algorithm));
+        controls.add(createStyledLabel("Array size"));
+        controls.add(styleSlider(size));
+        controls.add(createStyledLabel("Delay (ms)"));
+        controls.add(styleSlider(speed));
+        controls.add(targetLabel);
+        controls.add(styleTextField(target));
+        targetLabel.setForeground(Color.WHITE);
+        targetLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        controls.add(styleButton(reset));
+        controls.add(styleButton(run));
+        controls.add(styleButton(pause));
+        controls.add(styleButton(stop));
         stop.setEnabled(false);
         pause.setEnabled(false);
 
-        JPanel customInput = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 6));
+        JPanel customInput = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         customInput.setOpaque(false);
-        customInput.add(label("Custom size"));
-        customInput.add(customSize);
-        customInput.add(label("Elements (comma-separated)"));
-        customInput.add(customElements);
-        customInput.add(useCustomArray);
+        customInput.setBorder(BorderFactory.createEmptyBorder(4, 0, 8, 0));
+        customInput.add(createStyledLabel("Custom size"));
+        customInput.add(styleTextField(customSize));
+        customInput.add(createStyledLabel("Elements (comma-separated)"));
+        customInput.add(styleTextField(customElements));
+        customInput.add(styleButton(useCustomArray));
+
+        JPanel infoPanel = new JPanel(new BorderLayout());
+        infoPanel.setOpaque(true);
+        infoPanel.setBackground(BG_PANEL);
+        infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(51, 65, 85), 1, true),
+                BorderFactory.createEmptyBorder(6, 12, 6, 12)
+        ));
+        info.setForeground(new Color(203, 213, 225));
+        info.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        infoPanel.add(info, BorderLayout.WEST);
 
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
         bottom.setOpaque(false);
-        info.setForeground(new Color(203, 213, 225));
-        info.setFont(info.getFont().deriveFont(14f));
         bottom.add(controls, BorderLayout.NORTH);
         bottom.add(customInput, BorderLayout.CENTER);
-        bottom.add(info, BorderLayout.SOUTH);
+        bottom.add(infoPanel, BorderLayout.SOUTH);
         root.add(bottom, BorderLayout.SOUTH);
 
-        mode.addActionListener(e -> updateAlgorithmOptions());
-        algorithm.addActionListener(e -> updateInfo());
+        // Listeners
+        mode.addActionListener(e -> {
+            updateAlgorithmOptions();
+            showTargetField(isSearching());
+        });
+        algorithm.addActionListener(e -> {
+            updateInfo();
+            bars.repaint();
+        });
         reset.addActionListener(e -> generateArray());
         useCustomArray.addActionListener(e -> loadCustomArray());
         run.addActionListener(e -> start());
         stop.addActionListener(e -> stopAnimation());
         pause.addActionListener(e -> togglePause());
+
+        showTargetField(isSearching());
     }
 
-    private JLabel label(String text) {
+    // -------- Styling helpers --------
+    private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
-        label.setFont(label.getFont().deriveFont(12f));
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
         return label;
     }
 
+    private JComboBox<String> styleCombo(JComboBox<String> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        combo.setBackground(BG_PANEL);
+        combo.setForeground(Color.WHITE);
+        combo.setBorder(BorderFactory.createLineBorder(new Color(51, 65, 85), 1, true));
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (isSelected) {
+                    c.setBackground(ACCENT);
+                    c.setForeground(Color.BLACK);
+                } else {
+                    c.setBackground(BG_PANEL);
+                    c.setForeground(Color.WHITE);
+                }
+                if (c instanceof JLabel) ((JLabel) c).setOpaque(true);
+                return c;
+            }
+        });
+        return combo;
+    }
+
+    // Modern slider with clean look – no custom UI, just colours and dimensions.
+    private JSlider styleSlider(JSlider slider) {
+        slider.setBackground(BG_PANEL);
+        slider.setForeground(ACCENT);
+        slider.setPaintTicks(false);
+        slider.setPaintLabels(false);
+        slider.setPreferredSize(new Dimension(120, 30));
+        // The Nimbus L&F will automatically use the UIManager colours we set earlier.
+        return slider;
+    }
+
+    private JTextField styleTextField(JTextField field) {
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        field.setBackground(BG_PANEL);
+        field.setForeground(Color.WHITE);
+        field.setCaretColor(Color.WHITE);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(51, 65, 85), 1, true),
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+        ));
+        return field;
+    }
+
+    private JButton styleButton(JButton button) {
+        button.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        button.setBackground(ACCENT);
+        button.setForeground(Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void showTargetField(boolean show) {
+        targetLabel.setVisible(show);
+        target.setVisible(show);
+    }
+
+    // -------- Pause/Resume --------
     private void togglePause() {
         synchronized (pauseLock) {
             paused = !paused;
             pause.setText(paused ? "Resume" : "Pause");
-            if (!paused) {
-                pauseLock.notifyAll();
-            }
+            if (!paused) pauseLock.notifyAll();
         }
     }
 
+    // -------- Update Info --------
     private void updateInfo() {
         String selected = (String) algorithm.getSelectedItem();
         String complexity = switch (selected) {
@@ -179,6 +321,7 @@ public final class VisualizerFrame extends JFrame {
         return "Searching".equals(mode.getSelectedItem());
     }
 
+    // -------- Array generation & custom input (unchanged) --------
     private void generateArray() {
         values = new int[size.getValue()];
         for (int i = 0; i < values.length; i++) {
@@ -239,6 +382,7 @@ public final class VisualizerFrame extends JFrame {
         info.setText("Custom array loaded. A valid search target has been selected automatically.");
     }
 
+    // -------- Start / Stop --------
     private void start() {
         String selected = (String) algorithm.getSelectedItem();
         String targetText = target.getText().trim();
@@ -317,8 +461,7 @@ public final class VisualizerFrame extends JFrame {
         info.setText("Stopping animation...");
     }
 
-    // ---------- Sorting Algorithms ----------
-
+    // -------- Sorting Algorithms (unchanged) --------
     private void bubbleSort() {
         for (int end = values.length - 1; end > 0; end--) {
             for (int i = 0; i < end; i++) {
@@ -356,7 +499,6 @@ public final class VisualizerFrame extends JFrame {
         clearHighlight();
     }
 
-    // Merge Sort with detailed state
     private void mergeSort(int left, int right, int depth) {
         if (left >= right) return;
         int middle = left + (right - left) / 2;
@@ -409,11 +551,9 @@ public final class VisualizerFrame extends JFrame {
         repaintAndPause();
     }
 
-    // Quick Sort
     private void quickSort(int low, int high) {
         if (low >= high) return;
         int pivot = partition(low, high);
-        // after partition, pivot is at correct position; we can clear pivot index
         pivotIndex = -1;
         quickSort(low, pivot - 1);
         quickSort(pivot + 1, high);
@@ -421,29 +561,22 @@ public final class VisualizerFrame extends JFrame {
 
     private int partition(int low, int high) {
         int pivotValue = values[high];
-        pivotIndex = high;   // highlight pivot
+        pivotIndex = high;
         info.setText("Partitioning: pivot = " + pivotValue + " at index " + high);
         int i = low - 1;
         for (int j = low; j < high; j++) {
-            highlight(j, high);  // high is pivot
-            if (values[j] <= pivotValue) {
-                swap(++i, j);
-            }
+            highlight(j, high);
+            if (values[j] <= pivotValue) swap(++i, j);
         }
-        // swap pivot into place
         swap(i + 1, high);
-        // pivotIndex is now at i+1, but we clear it after returning
         pivotIndex = -1;
         return i + 1;
     }
 
-    // Heap Sort
     private void heapSort() {
-        // Build heap
         for (int i = values.length / 2 - 1; i >= 0; i--) {
             heapify(values.length, i);
         }
-        // Extract elements
         for (int i = values.length - 1; i > 0; i--) {
             swap(0, i);
             heapSize = i;
@@ -471,7 +604,6 @@ public final class VisualizerFrame extends JFrame {
         }
     }
 
-    // Searching
     private void linearSearch(int value) {
         for (int i = 0; i < values.length; i++) {
             highlight(i, -1);
@@ -505,8 +637,7 @@ public final class VisualizerFrame extends JFrame {
         repaintAndPause();
     }
 
-    // ---------- Helpers ----------
-
+    // -------- Helpers --------
     private void swap(int i, int j) {
         int tmp = values[i];
         values[i] = values[j];
@@ -529,7 +660,6 @@ public final class VisualizerFrame extends JFrame {
 
     private void repaintAndPause() {
         if (stopRequested) throw new AnimationStoppedException();
-
         synchronized (pauseLock) {
             while (paused && !stopRequested) {
                 try {
@@ -541,7 +671,6 @@ public final class VisualizerFrame extends JFrame {
             }
         }
         if (stopRequested) throw new AnimationStoppedException();
-
         bars.repaint();
         try {
             Thread.sleep(speed.getValue());
@@ -572,8 +701,7 @@ public final class VisualizerFrame extends JFrame {
     private static final class AnimationStoppedException extends RuntimeException {
     }
 
-    // ---------- Merge State ----------
-
+    // -------- Merge State --------
     private static final class MergeState {
         List<Split> splits = new ArrayList<>();
         int maxDepth = 0;
@@ -617,10 +745,8 @@ public final class VisualizerFrame extends JFrame {
         }
     }
 
-    // ---------- BarPanel ----------
-
+    // -------- BarPanel (custom painting) --------
     private final class BarPanel extends JPanel {
-
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -640,12 +766,12 @@ public final class VisualizerFrame extends JFrame {
             g2.dispose();
         }
 
-        // ------- Standard bar view (for other algorithms) -------
-
+        // ----- Clean, flat bars with shadow -----
         private void drawBarView(Graphics2D g2, String selectedAlgorithm) {
             int gap = Math.max(1, getWidth() / (values.length * 12));
             int barWidth = Math.max(2, (getWidth() - gap * (values.length + 1)) / values.length);
             int maxVal = Arrays.stream(values).max().orElse(1);
+
             for (int i = 0; i < values.length; i++) {
                 int height = (int) ((values[i] / (double) maxVal) * (getHeight() - 40));
                 int x = gap + i * (barWidth + gap);
@@ -655,44 +781,48 @@ public final class VisualizerFrame extends JFrame {
                 if (i == result) {
                     color = FOUND;
                 } else if (i == pivotIndex && "Quick Sort".equals(selectedAlgorithm)) {
-                    color = PIVOT_COLOR;   // pivot highlight
+                    color = PIVOT_COLOR;
                 } else if (i == first || i == second) {
                     color = ACTIVE;
                 } else {
-                    color = BAR;
+                    color = BAR_COLOR;
                 }
+
+                // Shadow
+                g2.setColor(new Color(0, 0, 0, 50));
+                g2.fillRoundRect(x + 2, y + 2, barWidth, height, 6, 6);
+
+                // Main bar
                 g2.setColor(color);
                 g2.fillRoundRect(x, y, barWidth, height, 6, 6);
-                // Draw a border around pivot
-                if (i == pivotIndex && "Quick Sort".equals(selectedAlgorithm)) {
-                    g2.setColor(Color.WHITE);
-                    g2.setStroke(new BasicStroke(2f));
+
+                // White glow for active/pivot/found
+                if (i == first || i == second || i == pivotIndex || i == result) {
+                    g2.setColor(new Color(255, 255, 255, 200));
+                    g2.setStroke(new BasicStroke(1.5f));
                     g2.drawRoundRect(x, y, barWidth, height, 6, 6);
                 }
+
+                // Value label
                 if (barWidth >= 18) {
                     g2.setColor(Color.WHITE);
                     g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
                     String val = String.valueOf(values[i]);
                     int tw = g2.getFontMetrics().stringWidth(val);
                     g2.drawString(val, x + (barWidth - tw) / 2, Math.max(13, y - 4));
-                    // If pivot, add a 'P' label at bottom
-                    if (i == pivotIndex && "Quick Sort".equals(selectedAlgorithm)) {
-                        g2.setColor(Color.WHITE);
-                        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 10f));
-                        g2.drawString("P", x + (barWidth - 6) / 2, y + height + 14);
-                    }
                 }
             }
         }
 
-        // ------- Merge Sort View -------
-
+        // ----- Merge Sort View (fills panel) -----
         private void drawMergeView(Graphics2D g2) {
+            // Header
             g2.setColor(Color.WHITE);
             g2.setFont(g2.getFont().deriveFont(Font.BOLD, 20f));
             g2.drawString("Merge Sort – Divide & Conquer", 24, 40);
             g2.setColor(new Color(203, 213, 225));
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
+
             String status = mergeState.isMerging ? "Merging two sorted halves" : "Splitting the array recursively";
             g2.drawString(status, 24, 66);
 
@@ -701,32 +831,39 @@ public final class VisualizerFrame extends JFrame {
             int cellHeight = 36;
             int gap = 4;
 
-            // Draw the current array at the top
-            drawArrayRow(g2, "Current array", values, 0, values.length - 1, first, second,
-                    24, yOffset, panelWidth, cellHeight, gap, BAR, null);
-            yOffset += cellHeight + 30;
+            // Always draw the current array (if any)
+            if (values != null && values.length > 0) {
+                drawArrayRow(g2, "Current array", values, 0, values.length - 1, first, second,
+                        24, yOffset, panelWidth, cellHeight, gap, BAR_COLOR, null);
+                yOffset += cellHeight + 30;
+            }
 
+            // If merging, show the two halves and output
             if (mergeState.isMerging) {
                 int[] left = mergeState.leftArr;
                 int[] right = mergeState.rightArr;
                 int[] output = mergeState.outputArr;
                 int outCount = mergeState.outputCount;
 
-                drawArrayRow(g2, "Left half", left, 0, left.length - 1,
-                        mergeState.leftCursor - 1, mergeState.leftCursor,
-                        24, yOffset, panelWidth / 2 - 10, cellHeight, gap, LEFT_COLOR, null);
-                drawArrayRow(g2, "Right half", right, 0, right.length - 1,
-                        mergeState.rightCursor - 1, mergeState.rightCursor,
-                        24 + panelWidth / 2 + 10, yOffset, panelWidth / 2 - 10, cellHeight, gap, RIGHT_COLOR, null);
+                if (left != null && left.length > 0) {
+                    drawArrayRow(g2, "Left half", left, 0, left.length - 1,
+                            mergeState.leftCursor - 1, mergeState.leftCursor,
+                            24, yOffset, panelWidth / 2 - 10, cellHeight, gap, new Color(14, 116, 144), null);
+                }
+                if (right != null && right.length > 0) {
+                    drawArrayRow(g2, "Right half", right, 0, right.length - 1,
+                            mergeState.rightCursor - 1, mergeState.rightCursor,
+                            24 + panelWidth / 2 + 10, yOffset, panelWidth / 2 - 10, cellHeight, gap, new Color(126, 34, 206), null);
+                }
                 yOffset += cellHeight + 30;
 
-                drawArrayRow(g2, "Merged output", output, 0, output.length - 1,
-                        -1, -1,
-                        24, yOffset, panelWidth, cellHeight, gap, FOUND,
-                        outCount);
-                yOffset += cellHeight + 30;
-            } else {
-                // Draw split tree level by level
+                if (output != null && output.length > 0) {
+                    drawArrayRow(g2, "Merged output", output, 0, output.length - 1,
+                            -1, -1,
+                            24, yOffset, panelWidth, cellHeight, gap, FOUND, outCount);
+                }
+            } else if (!mergeState.splits.isEmpty()) {
+                // Show split levels (only if we have splits)
                 int depth = 0;
                 int rowY = yOffset;
                 while (true) {
@@ -751,11 +888,20 @@ public final class VisualizerFrame extends JFrame {
                     }
                     rowY += cellHeight + 20;
                     depth++;
+                    // Prevent overflow
+                    if (rowY + cellHeight > getHeight() - 20) break;
                 }
+            } else {
+                // No splits and not merging – show a message
+                g2.setColor(new Color(203, 213, 225));
+                g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 18));
+                String msg = "Press 'Visualize' to start Merge Sort";
+                int tw = g2.getFontMetrics().stringWidth(msg);
+                g2.drawString(msg, (getWidth() - tw) / 2, getHeight() / 2);
             }
         }
 
-        // Helper: draw a row of bars for an array segment
+        // Helper to draw a row of cells (used in merge view)
         private void drawArrayRow(Graphics2D g2, String label, int[] arr, int start, int end,
                                   int highlight1, int highlight2,
                                   int x, int y, int width, int cellHeight, int gap,
@@ -775,13 +921,16 @@ public final class VisualizerFrame extends JFrame {
             int cellWidth = Math.max(8, (width - gap * (count - 1)) / count);
             int totalWidth = count * cellWidth + (count - 1) * gap;
             int startX = x + (width - totalWidth) / 2;
+
             for (int i = 0; i < count; i++) {
                 int idx = start + i;
                 int cx = startX + i * (cellWidth + gap);
                 int cy = y;
+
                 Color color = defaultColor;
                 if (i == highlight1 || i == highlight2) color = ACTIVE;
                 if (filledCount != null && i >= filledCount) color = new Color(30, 41, 59);
+
                 g2.setColor(color);
                 g2.fill(new RoundRectangle2D.Double(cx, cy, cellWidth, cellHeight, 6, 6));
                 g2.setColor(Color.WHITE);
@@ -795,8 +944,7 @@ public final class VisualizerFrame extends JFrame {
             }
         }
 
-        // ------- Heap Sort View -------
-
+        // ----- Heap Sort View (fills panel) -----
         private void drawHeapView(Graphics2D g2) {
             g2.setColor(Color.WHITE);
             g2.setFont(g2.getFont().deriveFont(Font.BOLD, 20f));
@@ -808,6 +956,18 @@ public final class VisualizerFrame extends JFrame {
             int levels = 32 - Integer.numberOfLeadingZeros(values.length);
             int radius = Math.max(10, Math.min(28, getWidth() / (1 << Math.min(levels + 1, 8))));
             int levelGap = Math.max(48, (getHeight() - 120) / Math.max(1, levels - 1));
+
+            // Check if we have something to draw (i.e., not idle)
+            boolean hasNodes = values != null && values.length > 0;
+
+            if (!hasNodes) {
+                g2.setColor(new Color(203, 213, 225));
+                g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 18));
+                String msg = "Press 'Visualize' to start Heap Sort";
+                int tw = g2.getFontMetrics().stringWidth(msg);
+                g2.drawString(msg, (getWidth() - tw) / 2, getHeight() / 2);
+                return;
+            }
 
             // Draw edges
             g2.setStroke(new BasicStroke(1.5f));
@@ -830,13 +990,14 @@ public final class VisualizerFrame extends JFrame {
                 Color fill;
                 if (i >= heapSize) {
                     fill = new Color(50, 50, 60);
+                } else if (active) {
+                    fill = ACTIVE;
                 } else {
-                    fill = active ? ACTIVE : BAR;
+                    fill = BAR_COLOR;
                 }
 
-                GradientPaint grad = new GradientPaint(x - radius, y - radius, fill,
-                        x + radius, y + radius, fill.darker());
-                g2.setPaint(grad);
+                // Simple solid circles
+                g2.setColor(fill);
                 g2.fillOval(x - radius, y - radius, radius * 2, radius * 2);
                 g2.setColor(Color.WHITE);
                 g2.drawOval(x - radius, y - radius, radius * 2, radius * 2);
@@ -847,7 +1008,6 @@ public final class VisualizerFrame extends JFrame {
                     int tw = g2.getFontMetrics().stringWidth(val);
                     g2.drawString(val, x - tw / 2, y + 5);
                 }
-                // Small index label
                 g2.setColor(new Color(148, 163, 184));
                 g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 10f));
                 g2.drawString(String.valueOf(i), x - 6, y + radius + 16);
@@ -867,6 +1027,7 @@ public final class VisualizerFrame extends JFrame {
         }
     }
 
+    // -------- Main --------
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new VisualizerFrame().setVisible(true));
     }
