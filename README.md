@@ -1,4 +1,4 @@
-# DSA Visualizer
+# Searching & Sorting Visualizer
 
 A desktop Java application that animates sorting and searching algorithms.
 
