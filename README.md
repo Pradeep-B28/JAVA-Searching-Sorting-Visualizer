@@ -4,6 +4,7 @@
 [![DSA](https://img.shields.io/badge/DSA-Visualizer-blue?style=for-the-badge)](https://github.com/Pradeep-B28)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
+
 > **Understand algorithms like never before.**  
 > This interactive tool visualizes how searching and sorting algorithms work internally, step-by-step, making complex DSA concepts easy to grasp for beginners and aspiring developers.
 
@@ -11,9 +12,8 @@
 
 ## 🚀 Live Demo / Preview
 
-*(Add a screenshot or GIF of your visualizer in action here!)*
 
-![Screenshot Placeholder](https://via.placeholder.com/800x400?text=Add+Your+Screenshot+Here)
+<img width="1920" height="1080" alt="Visualizer" src="https://github.com/user-attachments/assets/22e6ffd5-6652-4af5-be29-26f56b495972" />
 
 ---
 
