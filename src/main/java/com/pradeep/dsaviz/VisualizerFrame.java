@@ -10,16 +10,20 @@ import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 
 public final class VisualizerFrame extends JFrame {
-    // -------- Clean, modern color palette --------
-    private static final Color BG_DARK = new Color(10, 14, 23);
-    private static final Color BG_PANEL = new Color(20, 28, 45);
-    private static final Color BAR_COLOR = new Color(0, 180, 255);   // bright cyan
-    private static final Color ACTIVE = new Color(255, 215, 0);      // gold
-    private static final Color FOUND = new Color(0, 255, 136);       // neon green
-    private static final Color PIVOT_COLOR = new Color(255, 107, 157); // pink
-    private static final Color HEADER_START = new Color(0, 180, 255);
-    private static final Color HEADER_END = new Color(102, 126, 234);
-    private static final Color ACCENT = new Color(0, 180, 255);
+    // -------- Custom colour palette --------
+    private static final Color BAR_TOP = new Color(100, 180, 255);
+    private static final Color BAR_BOTTOM = new Color(0, 50, 150);
+    private static final Color ACTIVE = new Color(255, 165, 0);
+    private static final Color FOUND = new Color(0, 200, 0);
+    private static final Color PIVOT = new Color(255, 255, 0);
+    private static final Color HEADER_START = new Color(0, 100, 255);
+    private static final Color HEADER_MID = new Color(255, 165, 0);
+    private static final Color HEADER_END = new Color(255, 255, 0);
+    private static final Color BG_WHITE = new Color(255, 255, 255);
+    private static final Color BG_LIGHT_BLUE = new Color(200, 220, 255);
+    private static final Color BG_LIGHT_GREEN = new Color(200, 255, 200);
+    private static final Color BG_LIGHT_YELLOW = new Color(255, 255, 200);
+    private static final Color BG_LIGHT_ORANGE = new Color(255, 220, 180);
 
     // -------- Algorithm names --------
     private static final String[] SORTING_ALGORITHMS = {
@@ -41,11 +45,11 @@ public final class VisualizerFrame extends JFrame {
     private final JTextField customSize = new JTextField("5", 4);
     private final JTextField customElements = new JTextField(30);
     private final JLabel info = new JLabel();
-    private final JButton run = new JButton("Visualize");
-    private final JButton stop = new JButton("Stop");
-    private final JButton pause = new JButton("Pause");
-    private final JButton reset = new JButton("New Array");
-    private final JButton useCustomArray = new JButton("Use Custom Array");
+    private final JButton run = new JButton("▶ Visualize");
+    private final JButton stop = new JButton("⏹ Stop");
+    private final JButton pause = new JButton("⏸ Pause");
+    private final JButton reset = new JButton("⟳ New Array");
+    private final JButton useCustomArray = new JButton("📥 Use Custom Array");
 
     // -------- State --------
     private int[] values;
@@ -62,39 +66,55 @@ public final class VisualizerFrame extends JFrame {
     public VisualizerFrame() {
         super("DSA Visualizer");
         setModernLookAndFeel();
-        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(ACCENT));
+        UIManager.put("ComboBox.selectionBackground", new ColorUIResource(ACTIVE));
         UIManager.put("ComboBox.selectionForeground", new ColorUIResource(Color.BLACK));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1024, 720));
         setLocationByPlatform(true);
+        setContentPane(createGradientPanel());
         buildUi();
         updateAlgorithmOptions();
         generateArray();
         updateInfo();
+        showTargetField(isSearching()); // ensure target is hidden initially
+    }
+
+    // -------- Background panel with multi‑colour gradient --------
+    private JPanel createGradientPanel() {
+        return new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                float[] fractions = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+                Color[] colors = {BG_WHITE, BG_LIGHT_BLUE, BG_LIGHT_GREEN, BG_LIGHT_YELLOW, BG_LIGHT_ORANGE};
+                LinearGradientPaint gp = new LinearGradientPaint(0, 0, getWidth(), getHeight(), fractions, colors);
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
     }
 
     private void setModernLookAndFeel() {
         try {
             UIManager.setLookAndFeel(new NimbusLookAndFeel());
-            // Global dark theme
-            UIManager.put("control", new ColorUIResource(BG_PANEL));
-            UIManager.put("nimbusBase", new ColorUIResource(ACCENT));
-            UIManager.put("nimbusBlueGrey", new ColorUIResource(ACCENT));
-            UIManager.put("nimbusLightBackground", new ColorUIResource(BG_DARK));
-            UIManager.put("text", new ColorUIResource(Color.WHITE));
-            UIManager.put("nimbusSelectionBackground", new ColorUIResource(ACCENT));
+            UIManager.put("control", new ColorUIResource(Color.WHITE));
+            UIManager.put("nimbusBase", new ColorUIResource(ACTIVE));
+            UIManager.put("nimbusBlueGrey", new ColorUIResource(ACTIVE));
+            UIManager.put("nimbusLightBackground", new ColorUIResource(Color.WHITE));
+            UIManager.put("text", new ColorUIResource(Color.BLACK));
+            UIManager.put("nimbusSelectionBackground", new ColorUIResource(ACTIVE));
             UIManager.put("nimbusSelectionForeground", new ColorUIResource(Color.BLACK));
-            UIManager.put("info", new ColorUIResource(BG_PANEL));
-            UIManager.put("Button.background", new ColorUIResource(ACCENT));
-            UIManager.put("Button.foreground", new ColorUIResource(Color.WHITE));
-            UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 13));
-            // Slider styling – ensure these keys exist to avoid NPE if we were to use custom UI,
-            // but we won't – we'll just set these for the default Nimbus slider.
-            UIManager.put("Slider.background", new ColorUIResource(BG_PANEL));
-            UIManager.put("Slider.foreground", new ColorUIResource(ACCENT));
-            UIManager.put("Slider.trackColor", new ColorUIResource(ACCENT));
-            UIManager.put("Slider.thumbColor", new ColorUIResource(Color.WHITE));
-            // These are used by the default MetalSliderUI if Nimbus falls back – we set them defensively.
+            UIManager.put("info", new ColorUIResource(Color.WHITE));
+            UIManager.put("Button.background", new ColorUIResource(new Color(200, 230, 255)));
+            UIManager.put("Button.foreground", new ColorUIResource(Color.BLACK));
+            UIManager.put("Button.font", new Font("Segoe UI", Font.BOLD, 14));
+            UIManager.put("Slider.background", new ColorUIResource(Color.WHITE));
+            UIManager.put("Slider.foreground", new ColorUIResource(ACTIVE));
+            UIManager.put("Slider.trackColor", new ColorUIResource(ACTIVE));
+            UIManager.put("Slider.thumbColor", new ColorUIResource(ACTIVE));
             UIManager.put("Slider.thumbHeight", 16);
             UIManager.put("Slider.thumbWidth", 16);
             UIManager.put("Slider.trackWidth", 6);
@@ -108,9 +128,10 @@ public final class VisualizerFrame extends JFrame {
     // -------- UI Construction --------
     private void buildUi() {
         JPanel root = new JPanel(new BorderLayout(12, 12));
-        root.setBackground(BG_DARK);
+        root.setOpaque(false);
         root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-        setContentPane(root);
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().add(root, BorderLayout.CENTER);
 
         // Header
         JPanel header = new JPanel() {
@@ -118,7 +139,9 @@ public final class VisualizerFrame extends JFrame {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                GradientPaint gp = new GradientPaint(0, 0, HEADER_START, getWidth(), getHeight(), HEADER_END);
+                float[] fractions = {0.0f, 0.5f, 1.0f};
+                Color[] colors = {HEADER_START, HEADER_MID, HEADER_END};
+                LinearGradientPaint gp = new LinearGradientPaint(0, 0, getWidth(), 0, fractions, colors);
                 g2.setPaint(gp);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
@@ -138,10 +161,10 @@ public final class VisualizerFrame extends JFrame {
         header.add(subtitle, BorderLayout.SOUTH);
         root.add(header, BorderLayout.NORTH);
 
-        // Bar Panel - the main area
-        bars.setBackground(BG_DARK);
+        // Bar Panel
+        bars.setOpaque(false);
         bars.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(51, 65, 85), 2, true),
+                new LineBorder(new Color(0, 0, 0, 50), 2, true),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
         root.add(bars, BorderLayout.CENTER);
@@ -160,7 +183,7 @@ public final class VisualizerFrame extends JFrame {
         controls.add(styleSlider(speed));
         controls.add(targetLabel);
         controls.add(styleTextField(target));
-        targetLabel.setForeground(Color.WHITE);
+        targetLabel.setForeground(Color.BLACK);
         targetLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         controls.add(styleButton(reset));
         controls.add(styleButton(run));
@@ -169,6 +192,7 @@ public final class VisualizerFrame extends JFrame {
         stop.setEnabled(false);
         pause.setEnabled(false);
 
+        // Custom input
         JPanel customInput = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
         customInput.setOpaque(false);
         customInput.setBorder(BorderFactory.createEmptyBorder(4, 0, 8, 0));
@@ -178,15 +202,16 @@ public final class VisualizerFrame extends JFrame {
         customInput.add(styleTextField(customElements));
         customInput.add(styleButton(useCustomArray));
 
+        // Info Panel
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setOpaque(true);
-        infoPanel.setBackground(BG_PANEL);
+        infoPanel.setBackground(new Color(255, 255, 255, 200));
         infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(51, 65, 85), 1, true),
-                BorderFactory.createEmptyBorder(6, 12, 6, 12)
+                new LineBorder(new Color(0, 0, 0, 30), 1, true),
+                BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
-        info.setForeground(new Color(203, 213, 225));
-        info.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        info.setForeground(Color.BLACK);
+        info.setFont(new Font("Segoe UI", Font.BOLD, 16));
         infoPanel.add(info, BorderLayout.WEST);
 
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
@@ -217,98 +242,122 @@ public final class VisualizerFrame extends JFrame {
     // -------- Styling helpers --------
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setForeground(Color.WHITE);
+        label.setForeground(Color.BLACK);
         label.setFont(new Font("Segoe UI", Font.BOLD, 13));
         return label;
     }
 
     private JComboBox<String> styleCombo(JComboBox<String> combo) {
-        combo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        combo.setBackground(BG_PANEL);
-        combo.setForeground(Color.WHITE);
-        combo.setBorder(BorderFactory.createLineBorder(new Color(51, 65, 85), 1, true));
+        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        combo.setBackground(Color.WHITE);
+        combo.setForeground(Color.BLACK);
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(0, 0, 0, 50), 1, true),
+                BorderFactory.createEmptyBorder(2, 8, 2, 8)
+        ));
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                           boolean isSelected, boolean cellHasFocus) {
-                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                label.setOpaque(true);
                 if (isSelected) {
-                    c.setBackground(ACCENT);
-                    c.setForeground(Color.BLACK);
+                    label.setBackground(ACTIVE);
+                    label.setForeground(Color.BLACK);
                 } else {
-                    c.setBackground(BG_PANEL);
-                    c.setForeground(Color.WHITE);
+                    label.setBackground(Color.WHITE);
+                    label.setForeground(Color.BLACK);
                 }
-                if (c instanceof JLabel) ((JLabel) c).setOpaque(true);
-                return c;
+                label.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+                return label;
             }
         });
+        combo.setLightWeightPopupEnabled(true);
         return combo;
     }
 
-    // Modern slider with clean look – no custom UI, just colours and dimensions.
+    private JButton styleButton(JButton button) {
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setForeground(Color.BLACK);
+        button.setBackground(new Color(200, 230, 255));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(new Color(100, 150, 200), 2, true),
+                BorderFactory.createEmptyBorder(6, 14, 6, 14)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setOpaque(true);
+        return button;
+    }
+
     private JSlider styleSlider(JSlider slider) {
-        slider.setBackground(BG_PANEL);
-        slider.setForeground(ACCENT);
+        slider.setBackground(Color.WHITE);
+        slider.setForeground(ACTIVE);
         slider.setPaintTicks(false);
         slider.setPaintLabels(false);
         slider.setPreferredSize(new Dimension(120, 30));
-        // The Nimbus L&F will automatically use the UIManager colours we set earlier.
         return slider;
     }
 
     private JTextField styleTextField(JTextField field) {
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        field.setBackground(BG_PANEL);
-        field.setForeground(Color.WHITE);
-        field.setCaretColor(Color.WHITE);
+        field.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        field.setBackground(Color.WHITE);
+        field.setForeground(Color.BLACK);
+        field.setCaretColor(Color.BLACK);
         field.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(51, 65, 85), 1, true),
+                new LineBorder(new Color(0, 0, 0, 50), 1, true),
                 BorderFactory.createEmptyBorder(4, 6, 4, 6)
         ));
         return field;
     }
 
-    private JButton styleButton(JButton button) {
-        button.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        button.setBackground(ACCENT);
-        button.setForeground(Color.WHITE);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
-        button.setFocusPainted(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return button;
-    }
-
+    // -------- Target field: hide completely when not searching --------
     private void showTargetField(boolean show) {
         targetLabel.setVisible(show);
         target.setVisible(show);
+        if (show) {
+            targetLabel.setPreferredSize(null);
+            target.setPreferredSize(null);
+        } else {
+            // Remove the space completely
+            targetLabel.setPreferredSize(new Dimension(0, 0));
+            target.setPreferredSize(new Dimension(0, 0));
+        }
+        revalidate();
+        repaint();
     }
 
     // -------- Pause/Resume --------
     private void togglePause() {
         synchronized (pauseLock) {
             paused = !paused;
-            pause.setText(paused ? "Resume" : "Pause");
+            pause.setText(paused ? "▶ Resume" : "⏸ Pause");
             if (!paused) pauseLock.notifyAll();
         }
     }
 
-    // -------- Update Info --------
+    // -------- Update Info (black + bold) --------
     private void updateInfo() {
         String selected = (String) algorithm.getSelectedItem();
         String complexity = switch (selected) {
-            case "Bubble Sort" -> "Time: O(n²) | Space: O(1)";
-            case "Selection Sort" -> "Time: O(n²) | Space: O(1)";
-            case "Insertion Sort" -> "Time: O(n²) worst, O(n) best | Space: O(1)";
-            case "Merge Sort" -> "Time: O(n log n) | Space: O(n)";
-            case "Quick Sort" -> "Time: O(n log n) avg | Space: O(log n)";
-            case "Heap Sort" -> "Time: O(n log n) | Space: O(1)";
-            case "Linear Search" -> "Time: O(n) | Space: O(1)";
-            case "Binary Search" -> "Time: O(log n) | Space: O(1)";
+            case "Bubble Sort" -> "O(n²) · O(1)";
+            case "Selection Sort" -> "O(n²) · O(1)";
+            case "Insertion Sort" -> "O(n²) · O(1)";
+            case "Merge Sort" -> "O(n log n) · O(n)";
+            case "Quick Sort" -> "O(n log n) · O(log n)";
+            case "Heap Sort" -> "O(n log n) · O(1)";
+            case "Linear Search" -> "O(n) · O(1)";
+            case "Binary Search" -> "O(log n) · O(1)";
             default -> "";
         };
-        info.setText("<html><b>" + selected + "</b> &nbsp;|&nbsp; " + complexity + "</html>");
+        info.setText("<html><span style='color: #0066cc; font-size: 18px; font-weight: bold;'>⚡ " + selected +
+                     "</span> &nbsp;|&nbsp; <span style='color: #cc6600; font-weight: bold;'>Time: <b>" + complexity +
+                     "</b></span> &nbsp;|&nbsp; <span style='color: #009900; font-weight: bold;'>✨ Ready</span></html>");
     }
+
+    // -------- The rest of the methods (algorithm logic, merge state, bar painting) --------
+    // (Identical to previous version – omitted here for brevity, but included in the final code.)
 
     private void updateAlgorithmOptions() {
         String[] options = isSearching() ? SEARCHING_ALGORITHMS : SORTING_ALGORITHMS;
@@ -321,7 +370,6 @@ public final class VisualizerFrame extends JFrame {
         return "Searching".equals(mode.getSelectedItem());
     }
 
-    // -------- Array generation & custom input (unchanged) --------
     private void generateArray() {
         values = new int[size.getValue()];
         for (int i = 0; i < values.length; i++) {
@@ -382,7 +430,6 @@ public final class VisualizerFrame extends JFrame {
         info.setText("Custom array loaded. A valid search target has been selected automatically.");
     }
 
-    // -------- Start / Stop --------
     private void start() {
         String selected = (String) algorithm.getSelectedItem();
         String targetText = target.getText().trim();
@@ -393,7 +440,7 @@ public final class VisualizerFrame extends JFrame {
         setControlsEnabled(false);
         stopRequested = false;
         paused = false;
-        pause.setText("Pause");
+        pause.setText("⏸ Pause");
         pause.setEnabled(true);
         stop.setEnabled(true);
         result = first = second = -1;
@@ -461,7 +508,7 @@ public final class VisualizerFrame extends JFrame {
         info.setText("Stopping animation...");
     }
 
-    // -------- Sorting Algorithms (unchanged) --------
+    // -------- Sorting Algorithms --------
     private void bubbleSort() {
         for (int end = values.length - 1; end > 0; end--) {
             for (int i = 0; i < end; i++) {
@@ -766,7 +813,7 @@ public final class VisualizerFrame extends JFrame {
             g2.dispose();
         }
 
-        // ----- Clean, flat bars with shadow -----
+        // ----- Bar view: vertical gradient + numbers in BLACK -----
         private void drawBarView(Graphics2D g2, String selectedAlgorithm) {
             int gap = Math.max(1, getWidth() / (values.length * 12));
             int barWidth = Math.max(2, (getWidth() - gap * (values.length + 1)) / values.length);
@@ -777,52 +824,53 @@ public final class VisualizerFrame extends JFrame {
                 int x = gap + i * (barWidth + gap);
                 int y = getHeight() - height - 12;
 
-                Color color;
+                Color topColor, bottomColor;
                 if (i == result) {
-                    color = FOUND;
+                    topColor = FOUND;
+                    bottomColor = FOUND.darker();
                 } else if (i == pivotIndex && "Quick Sort".equals(selectedAlgorithm)) {
-                    color = PIVOT_COLOR;
+                    topColor = PIVOT;
+                    bottomColor = PIVOT.darker();
                 } else if (i == first || i == second) {
-                    color = ACTIVE;
+                    topColor = ACTIVE;
+                    bottomColor = ACTIVE.darker();
                 } else {
-                    color = BAR_COLOR;
+                    topColor = BAR_TOP;
+                    bottomColor = BAR_BOTTOM;
                 }
 
-                // Shadow
-                g2.setColor(new Color(0, 0, 0, 50));
-                g2.fillRoundRect(x + 2, y + 2, barWidth, height, 6, 6);
+                GradientPaint gp = new GradientPaint(x, y, topColor, x, y + height, bottomColor);
+                g2.setPaint(gp);
 
-                // Main bar
-                g2.setColor(color);
-                g2.fillRoundRect(x, y, barWidth, height, 6, 6);
+                g2.setColor(new Color(0, 0, 0, 30));
+                g2.fillRoundRect(x + 2, y + 2, barWidth, height, 8, 8);
 
-                // White glow for active/pivot/found
+                g2.setPaint(gp);
+                g2.fillRoundRect(x, y, barWidth, height, 8, 8);
+
                 if (i == first || i == second || i == pivotIndex || i == result) {
-                    g2.setColor(new Color(255, 255, 255, 200));
+                    g2.setColor(new Color(255, 255, 255, 180));
                     g2.setStroke(new BasicStroke(1.5f));
-                    g2.drawRoundRect(x, y, barWidth, height, 6, 6);
+                    g2.drawRoundRect(x, y, barWidth, height, 8, 8);
                 }
 
-                // Value label
                 if (barWidth >= 18) {
-                    g2.setColor(Color.WHITE);
-                    g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
+                    g2.setColor(Color.BLACK);
+                    g2.setFont(g2.getFont().deriveFont(Font.BOLD, 12f));
                     String val = String.valueOf(values[i]);
                     int tw = g2.getFontMetrics().stringWidth(val);
-                    g2.drawString(val, x + (barWidth - tw) / 2, Math.max(13, y - 4));
+                    g2.drawString(val, x + (barWidth - tw) / 2, Math.max(14, y - 4));
                 }
             }
         }
 
-        // ----- Merge Sort View (fills panel) -----
+        // ----- Merge Sort View -----
         private void drawMergeView(Graphics2D g2) {
-            // Header
-            g2.setColor(Color.WHITE);
+            g2.setColor(Color.BLACK);
             g2.setFont(g2.getFont().deriveFont(Font.BOLD, 20f));
             g2.drawString("Merge Sort – Divide & Conquer", 24, 40);
-            g2.setColor(new Color(203, 213, 225));
+            g2.setColor(new Color(80, 80, 80));
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
-
             String status = mergeState.isMerging ? "Merging two sorted halves" : "Splitting the array recursively";
             g2.drawString(status, 24, 66);
 
@@ -831,14 +879,12 @@ public final class VisualizerFrame extends JFrame {
             int cellHeight = 36;
             int gap = 4;
 
-            // Always draw the current array (if any)
             if (values != null && values.length > 0) {
                 drawArrayRow(g2, "Current array", values, 0, values.length - 1, first, second,
-                        24, yOffset, panelWidth, cellHeight, gap, BAR_COLOR, null);
+                        24, yOffset, panelWidth, cellHeight, gap, BAR_TOP, BAR_BOTTOM, null);
                 yOffset += cellHeight + 30;
             }
 
-            // If merging, show the two halves and output
             if (mergeState.isMerging) {
                 int[] left = mergeState.leftArr;
                 int[] right = mergeState.rightArr;
@@ -848,22 +894,23 @@ public final class VisualizerFrame extends JFrame {
                 if (left != null && left.length > 0) {
                     drawArrayRow(g2, "Left half", left, 0, left.length - 1,
                             mergeState.leftCursor - 1, mergeState.leftCursor,
-                            24, yOffset, panelWidth / 2 - 10, cellHeight, gap, new Color(14, 116, 144), null);
+                            24, yOffset, panelWidth / 2 - 10, cellHeight, gap,
+                            new Color(100, 180, 255), new Color(0, 50, 150), null);
                 }
                 if (right != null && right.length > 0) {
                     drawArrayRow(g2, "Right half", right, 0, right.length - 1,
                             mergeState.rightCursor - 1, mergeState.rightCursor,
-                            24 + panelWidth / 2 + 10, yOffset, panelWidth / 2 - 10, cellHeight, gap, new Color(126, 34, 206), null);
+                            24 + panelWidth / 2 + 10, yOffset, panelWidth / 2 - 10, cellHeight, gap,
+                            new Color(100, 180, 255), new Color(0, 50, 150), null);
                 }
                 yOffset += cellHeight + 30;
-
                 if (output != null && output.length > 0) {
                     drawArrayRow(g2, "Merged output", output, 0, output.length - 1,
                             -1, -1,
-                            24, yOffset, panelWidth, cellHeight, gap, FOUND, outCount);
+                            24, yOffset, panelWidth, cellHeight, gap,
+                            FOUND, FOUND.darker(), outCount);
                 }
             } else if (!mergeState.splits.isEmpty()) {
-                // Show split levels (only if we have splits)
                 int depth = 0;
                 int rowY = yOffset;
                 while (true) {
@@ -883,17 +930,15 @@ public final class VisualizerFrame extends JFrame {
                         drawArrayRow(g2, "", subArr, 0, subArr.length - 1,
                                 h1, h2,
                                 x, rowY, splitWidth - 4, cellHeight, gap,
-                                new Color(56, 189, 248, 180), null);
+                                new Color(100, 180, 255, 180), new Color(0, 50, 150, 180), null);
                         x += splitWidth + gap;
                     }
                     rowY += cellHeight + 20;
                     depth++;
-                    // Prevent overflow
                     if (rowY + cellHeight > getHeight() - 20) break;
                 }
             } else {
-                // No splits and not merging – show a message
-                g2.setColor(new Color(203, 213, 225));
+                g2.setColor(new Color(80, 80, 80));
                 g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 18));
                 String msg = "Press 'Visualize' to start Merge Sort";
                 int tw = g2.getFontMetrics().stringWidth(msg);
@@ -901,19 +946,18 @@ public final class VisualizerFrame extends JFrame {
             }
         }
 
-        // Helper to draw a row of cells (used in merge view)
         private void drawArrayRow(Graphics2D g2, String label, int[] arr, int start, int end,
                                   int highlight1, int highlight2,
                                   int x, int y, int width, int cellHeight, int gap,
-                                  Color defaultColor, Integer filledCount) {
+                                  Color topColor, Color bottomColor, Integer filledCount) {
             if (arr == null || arr.length == 0) {
-                g2.setColor(new Color(203, 213, 225));
+                g2.setColor(new Color(80, 80, 80));
                 g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 12f));
                 g2.drawString("(empty)", x, y + 14);
                 return;
             }
             if (!label.isEmpty()) {
-                g2.setColor(Color.WHITE);
+                g2.setColor(Color.BLACK);
                 g2.setFont(g2.getFont().deriveFont(Font.BOLD, 13f));
                 g2.drawString(label, x, y - 6);
             }
@@ -927,29 +971,38 @@ public final class VisualizerFrame extends JFrame {
                 int cx = startX + i * (cellWidth + gap);
                 int cy = y;
 
-                Color color = defaultColor;
-                if (i == highlight1 || i == highlight2) color = ACTIVE;
-                if (filledCount != null && i >= filledCount) color = new Color(30, 41, 59);
+                Color useTop = topColor;
+                Color useBottom = bottomColor;
+                if (i == highlight1 || i == highlight2) {
+                    useTop = ACTIVE;
+                    useBottom = ACTIVE.darker();
+                }
+                if (filledCount != null && i >= filledCount) {
+                    useTop = new Color(200, 200, 200);
+                    useBottom = new Color(150, 150, 150);
+                }
 
-                g2.setColor(color);
+                GradientPaint gp = new GradientPaint(cx, cy, useTop, cx, cy + cellHeight, useBottom);
+                g2.setPaint(gp);
                 g2.fill(new RoundRectangle2D.Double(cx, cy, cellWidth, cellHeight, 6, 6));
-                g2.setColor(Color.WHITE);
+                g2.setColor(Color.BLACK);
                 g2.draw(new RoundRectangle2D.Double(cx, cy, cellWidth, cellHeight, 6, 6));
                 if (cellWidth >= 16) {
                     String val = String.valueOf(arr[i]);
                     g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
                     int tw = g2.getFontMetrics().stringWidth(val);
+                    g2.setColor(Color.BLACK);
                     g2.drawString(val, cx + (cellWidth - tw) / 2, cy + cellHeight - 8);
                 }
             }
         }
 
-        // ----- Heap Sort View (fills panel) -----
+        // ----- Heap Sort View -----
         private void drawHeapView(Graphics2D g2) {
-            g2.setColor(Color.WHITE);
+            g2.setColor(Color.BLACK);
             g2.setFont(g2.getFont().deriveFont(Font.BOLD, 20f));
             g2.drawString("Heap Sort – Binary Heap", 24, 40);
-            g2.setColor(new Color(203, 213, 225));
+            g2.setColor(new Color(80, 80, 80));
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
             g2.drawString("Building max-heap and extracting elements", 24, 66);
 
@@ -957,11 +1010,8 @@ public final class VisualizerFrame extends JFrame {
             int radius = Math.max(10, Math.min(28, getWidth() / (1 << Math.min(levels + 1, 8))));
             int levelGap = Math.max(48, (getHeight() - 120) / Math.max(1, levels - 1));
 
-            // Check if we have something to draw (i.e., not idle)
-            boolean hasNodes = values != null && values.length > 0;
-
-            if (!hasNodes) {
-                g2.setColor(new Color(203, 213, 225));
+            if (values == null || values.length == 0) {
+                g2.setColor(new Color(80, 80, 80));
                 g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 18));
                 String msg = "Press 'Visualize' to start Heap Sort";
                 int tw = g2.getFontMetrics().stringWidth(msg);
@@ -969,7 +1019,6 @@ public final class VisualizerFrame extends JFrame {
                 return;
             }
 
-            // Draw edges
             g2.setStroke(new BasicStroke(1.5f));
             for (int i = 1; i < values.length; i++) {
                 int parent = (i - 1) / 2;
@@ -977,38 +1026,41 @@ public final class VisualizerFrame extends JFrame {
                 int py = nodeY(parent, levelGap);
                 int cx = nodeX(i, getWidth());
                 int cy = nodeY(i, levelGap);
-                g2.setColor(new Color(100, 116, 139, 120));
+                g2.setColor(new Color(100, 100, 100, 120));
                 g2.drawLine(px, py + radius / 2, cx, cy - radius / 2);
             }
 
-            // Draw nodes
             for (int i = 0; i < values.length; i++) {
                 int x = nodeX(i, getWidth());
                 int y = nodeY(i, levelGap);
                 boolean active = (i == first || i == second);
 
-                Color fill;
+                Color topCol, bottomCol;
                 if (i >= heapSize) {
-                    fill = new Color(50, 50, 60);
+                    topCol = new Color(180, 180, 180);
+                    bottomCol = new Color(120, 120, 120);
                 } else if (active) {
-                    fill = ACTIVE;
+                    topCol = ACTIVE;
+                    bottomCol = ACTIVE.darker();
                 } else {
-                    fill = BAR_COLOR;
+                    topCol = BAR_TOP;
+                    bottomCol = BAR_BOTTOM;
                 }
 
-                // Simple solid circles
-                g2.setColor(fill);
+                GradientPaint gp = new GradientPaint(x - radius, y - radius, topCol,
+                        x + radius, y + radius, bottomCol);
+                g2.setPaint(gp);
                 g2.fillOval(x - radius, y - radius, radius * 2, radius * 2);
-                g2.setColor(Color.WHITE);
+                g2.setColor(Color.BLACK);
                 g2.drawOval(x - radius, y - radius, radius * 2, radius * 2);
                 if (radius >= 14) {
                     String val = String.valueOf(values[i]);
-                    g2.setColor(Color.WHITE);
+                    g2.setColor(Color.BLACK);
                     g2.setFont(g2.getFont().deriveFont(Font.BOLD, 13f));
                     int tw = g2.getFontMetrics().stringWidth(val);
                     g2.drawString(val, x - tw / 2, y + 5);
                 }
-                g2.setColor(new Color(148, 163, 184));
+                g2.setColor(new Color(80, 80, 80));
                 g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 10f));
                 g2.drawString(String.valueOf(i), x - 6, y + radius + 16);
             }
