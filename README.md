@@ -18,17 +18,16 @@
 
 ---
 
-## 📸 Application Preview
+## 🚀 Live Demo / Preview
 
 <div align="center">
-  <img src="Screenshot.png" alt="Java Searching and Sorting Visualizer GUI" width="100%" />
-  <p><em>Real-time Selection Sort execution on a custom array size with dynamic speed controls and step-by-step progress tracking.</em></p>
+  <img width="1920" height="1080" alt="Visualizer" src="https://github.com/user-attachments/assets/22e6ffd5-6652-4af5-be29-26f56b495972" />
 </div>
 
 ---
 
 ## 📋 Table of Contents
-- [Application Preview](#-application-preview)
+- [Live Demo / Preview](#-live-demo--preview)
 - [Overview](#-overview)
 - [Supported Algorithms & Complexities](#-supported-algorithms--complexities)
 - [Interactive Features & Controls](#-interactive-features--controls)
