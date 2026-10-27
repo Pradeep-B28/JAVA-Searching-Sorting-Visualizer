@@ -1,109 +1,70 @@
-<div align="center">
+# Java DSA Visualizer — Real-Time Algorithm Animation Suite
 
-# 📊 Java DSA Visualizer — Real-Time Algorithm Animation Suite
-
-### *High-Performance, Frame-by-Frame Interactive Visualizer for Searching & Sorting Algorithms in Pure Java*
-
-[![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2026-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![GUI](https://img.shields.io/badge/GUI-Java%20Swing%20%2B%20Graphics2D-007396?style=for-the-badge&logo=java&logoColor=white)](https://docs.oracle.com/javase/tutorial/uiswing/)
-[![Algorithms](https://img.shields.io/badge/Category-Searching%20%26%20Sorting-0891B2?style=for-the-badge)](src/main/java/com/pradeep/dsaviz/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-
-<p align="center">
-  A responsive desktop visualizer engineered in Java Swing & Graphics2D.<br />
-  Watch algorithm state changes, pivot partitions, pointer convergence, and element swaps unfold with customizable delays and color-coded telemetry.
-</p>
-
-</div>
+> **Source Repository:** [github.com/Pradeep-B28/JAVA-Searching-Sorting-Visualizer](https://github.com/Pradeep-B28/JAVA-Searching-Sorting-Visualizer)  
+> **Author:** [B Pradeep](https://github.com/Pradeep-B28) · [Portfolio](https://pradeep-b28.github.io/Pradeep-B28/)
 
 ---
 
-## 🚀 Live Demo / Preview
+## Overview
 
-<div align="center">
-  <img width="1920" height="1080" alt="Visualizer" src="https://github.com/user-attachments/assets/22e6ffd5-6652-4af5-be29-26f56b495972" />
-</div>
+**Java DSA Visualizer** is a high-performance desktop animation tool engineered in pure Java with Swing and `Graphics2D`. It visualizes the internal mechanics of searching and sorting algorithms—including in-place partitioning in QuickSort, auxiliary array merging in MergeSort, max-heap sift-downs in HeapSort, and binary search interval halving—frame-by-frame with real-time operational telemetry.
 
----
-
-## 📋 Table of Contents
-- [Live Demo / Preview](#-live-demo--preview)
-- [Overview](#-overview)
-- [Supported Algorithms & Complexities](#-supported-algorithms--complexities)
-- [Interactive Features & Controls](#-interactive-features--controls)
-- [Architecture & Rendering Pipeline](#-architecture--rendering-pipeline)
-- [Quick Start Guide](#-quick-start-guide)
-- [Repository Structure](#-repository-structure)
-- [License & Copyright](#-license--copyright)
-
----
-
-## 💡 Overview
-
-Abstract algorithm mechanics—like in-place partitioning in QuickSort, auxiliary array merging in MergeSort, or binary search interval halving—are best comprehended visually. 
-
-**Java DSA Visualizer** provides a smooth, real-time animation canvas with dedicated worker threads, ensuring the UI remains 100% responsive while animating heavy computational sorts across hundreds of elements.
+```mermaid
+flowchart TD
+    UI["Swing Event Dispatch Thread (EDT)\n(Toolbar, Sliders, Speed Controls, BarPanel Canvas)"]
+    
+    subgraph Multi-Threaded Execution
+        Worker["Background Animation Worker Thread\n(Executes Sorting Logic & Array Swaps)"]
+        Throttle["Thread.sleep(delayMs)\n(Granular 5ms - 500ms Animation Rate)"]
+    end
+    
+    UI -->|Start / Pause / Step Action| Worker
+    Worker --> Throttle
+    Throttle -->|Repaint signal via SwingUtilities.invokeLater| UI
+    
+    UI --> Telemetry["Real-Time Array Telemetry\n(Active Swaps · Comparisons Counter · Element States)"]
+```
 
 ---
 
-## ⚡ Supported Algorithms & Complexities
+## Supported Algorithms & Complexity Reference
 
-| Algorithm | Category | Best Time | Average Time | Worst Time | Space Complexity | Visual Indicators |
+| Algorithm | Category | Best Case | Average Case | Worst Case | Space | Visual Color Indicators |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Bubble Sort** | Comparison Sort | $\mathcal{O}(N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | 🔴 Comparing Adjacent, 🟢 Placed Element |
-| **Selection Sort** | Selection Sort | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | 🟡 Current Minimum, 🔵 Scan Pointer |
-| **Insertion Sort** | Insertion Sort | $\mathcal{O}(N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | 🟣 Shifting Element, 🟢 Sorted Prefix |
-| **Merge Sort** | Divide & Conquer | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N)$ | 🟠 Subarray Splits, 🟢 Merged Elements |
-| **Quick Sort** | Divide & Conquer | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(\log N)$ | 🔵 Pivot Element, 🔴 Left/Right Pointers |
-| **Heap Sort** | Selection Sort | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(1)$ | 🟡 Max-Heapify Sift, 🟢 Extracted Root |
-| **Binary Search** | Searching | $\mathcal{O}(1)$ | $\mathcal{O}(\log N)$ | $\mathcal{O}(\log N)$ | $\mathcal{O}(1)$ | 🟣 Midpoint, ⚪ Discarded Range, 🟢 Found |
-| **Linear Search** | Searching | $\mathcal{O}(1)$ | $\mathcal{O}(N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | 🔵 Scanning Index, 🟢 Target Found |
+| **Bubble Sort** | Comparison Sort | $\mathcal{O}(N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | Red: Comparing adjacent · Green: Sorted element |
+| **Selection Sort** | Selection Sort | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | Yellow: Minimum found · Blue: Active scan pointer |
+| **Insertion Sort** | Insertion Sort | $\mathcal{O}(N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(1)$ | Purple: Shifting key · Green: Sorted prefix |
+| **Merge Sort** | Divide & Conquer | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N)$ | Orange: Subarray boundary · Green: Merged items |
+| **Quick Sort** | Divide & Conquer | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N^2)$ | $\mathcal{O}(\log N)$ | Blue: Active pivot · Red: Left/Right pointers |
+| **Heap Sort** | Selection Sort | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(1)$ | Yellow: Sift-down swap · Green: Extracted root |
+| **Binary Search** | Searching | $\mathcal{O}(1)$ | $\mathcal{O}(\log N)$ | $\mathcal{O}(\log N)$ | $\mathcal{O}(1)$ | Purple: Midpoint · Gray: Eliminated bounds · Green: Target |
+| **Linear Search** | Searching | $\mathcal{O}(1)$ | $\mathcal{O}(N)$ | $\mathcal{O}(N)$ | $\mathcal{O}(1)$ | Blue: Scan index · Green: Target found |
 
 ---
 
-## 🎛️ Interactive Features & Controls
+## Key Features & Controls
 
-- ⏯️ **Playback Controller**: Dedicated Run, Pause, Single-Step Forward, and Cancel/Reset controls.
-- 🎚️ **Dynamic Scale & Speed**:
-  - **Dataset Size Slider**: Scale from 10 elements up to 200 elements in real time.
-  - **Animation Speed Slider**: Granular delay tuning from 5ms ultra-fast execution to 500ms slow-motion step tracing.
-- 🎲 **Dataset Generators**:
-  - **Random Distribution**: Uniform randomized array.
-  - **Nearly Sorted**: Simulates real-world semi-sorted inputs.
-  - **Reversed Order**: Demonstrates worst-case algorithm behaviors.
-  - **Heavy Duplicates**: Tests stability and duplicate handling.
-- 📈 **Real-Time Telemetry**: Real-time counter tracking total array comparisons and element swaps.
-
----
-
-## 🏗️ Architecture & Rendering Pipeline
-
-```
-+-------------------------------------------------------------+
-|                     Swing Event Dispatch Thread (EDT)       |
-|    - Top Control Toolbar (Combo boxes, Buttons, Sliders)    |
-|    - VisualizerFrame & Custom BarPanel Canvas               |
-+-------------------------------------------------------------+
-                               ▲
-                               │ Repaint signals (SwingUtilities.invokeLater)
-                               │
-+-------------------------------------------------------------+
-|                 Background Animation Worker Thread          |
-|    - Executes Sorting / Searching Algorithm                 |
-|    - Thread.sleep(animationSpeed) for timing control         |
-|    - Dispatches state updates (highlights, pointers, swaps) |
-+-------------------------------------------------------------+
-```
+1. **Multi-Threaded Responsiveness:**
+   - Decouples the Swing Event Dispatch Thread (EDT) from algorithm computation. Long-running computational sorts never freeze or stutter window resizing or user inputs.
+2. **Granular Playback Controls:**
+   - Full Run, Pause, Single-Step Forward, and Reset controls.
+3. **Dataset Generators:**
+   - **Uniform Random:** Standard distribution across dataset sizes (10 to 200 bars).
+   - **Nearly Sorted:** Simulates realistic pre-sorted data.
+   - **Reversed Order:** Triggers worst-case asymptotic behaviors.
+   - **High Duplicates:** Validates stability with duplicate keys.
+4. **Live Telemetry:**
+   - Real-time counters showing exact comparison and swap totals.
 
 ---
 
-## 🚀 Quick Start Guide
+## Compilation & Quick Start
 
 ### Prerequisites
-- Java Development Kit (JDK 17 or higher) installed and configured on your system.
+- JDK 17 or higher
+- Windows, macOS, or Linux desktop environment
 
 ### Build & Run
-
 ```powershell
 # 1. Clone the repository
 git clone https://github.com/Pradeep-B28/JAVA-Searching-Sorting-Visualizer.git
@@ -112,54 +73,12 @@ cd JAVA-Searching-Sorting-Visualizer
 # 2. Compile Java source files to out/ directory
 javac -d out src/main/java/com/pradeep/dsaviz/*.java
 
-# 3. Launch the Application
+# 3. Launch the desktop visualizer
 java -cp out com.pradeep.dsaviz.DSAVisualizerApp
 ```
 
 ---
 
-## 📁 Repository Structure
+## License
 
-```text
-JAVA-Searching-Sorting-Visualizer/
-├── src/main/java/com/pradeep/dsaviz/
-│   ├── DSAVisualizerApp.java          # Application entry point & UI setup
-│   └── VisualizerFrame.java           # Custom Graphics2D rendering engine & sorting algorithms
-├── out/                               # Compiled class binaries (git-ignored)
-├── Screenshot.png                     # Application screenshot
-├── LICENSE                            # MIT License with copyright
-└── README.md                          # Documentation & complexity guide
-```
-
----
-
-## 📄 License & Copyright
-
-```
-Copyright (c) 2026 Pradeep (Pradeep-B28). All Rights Reserved.
-
-Licensed under the MIT License. You may freely use, modify, and distribute
-this project under the terms of the MIT license. See the LICENSE file for details.
-```
-
-Engineered with ☕ by **[Pradeep](https://github.com/Pradeep-B28)**.
-
----
-
-## 👨‍💻 Author & Contact
-
-**Pradeep B**  
-*Java & DSA Master Trainer | Full-Stack Architect | Web Platform Engineer*
-
-- 🌐 **Softech Career & Placement Portal:** [reachsoftech.onrender.com](https://reachsoftech.onrender.com/home)
-- 🌌 **3D Interactive Developer Portfolio:** [pradeep-b28.github.io/GIT_3D_Portfolio](https://pradeep-b28.github.io/GIT_3D_Portfolio/)
-- 💻 **GitHub Profile:** [@Pradeep-B28](https://github.com/Pradeep-B28)
-- 💼 **LinkedIn:** [linkedin.com/in/pradeepb-2k](https://www.linkedin.com/in/pradeepb-2k)
-- 📧 **Email:** [pradeepbashaa@gmail.com](mailto:pradeepbashaa@gmail.com)
-
-### 🚀 Live Web Applications & Platforms
-- 🌐 **Softech Career Portal:** [reachsoftech.onrender.com](https://reachsoftech.onrender.com/home)
-- 🗺️ **Namma Route (Tamil Nadu Transit Graph):** [nammaroute-sigma.vercel.app](https://nammaroute-sigma.vercel.app/)
-- 🎆 **Diwali Sky (Fireworks Simulator):** [diwalisky.vercel.app](https://diwalisky.vercel.app)
-- ⚪ **Life in Dots (Lifespan in Weeks):** [lifeindots.vercel.app](https://lifeindots.vercel.app)
-- 🤖 **Catch the AI (Code Review & Debug Game):** [catchtheai.vercel.app](https://catchtheai.vercel.app/)
+This project is licensed under the [MIT License](LICENSE).
